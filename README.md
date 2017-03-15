@@ -11,6 +11,7 @@ same presidential nominee. Identifying such communities allows us to evaluate in
 objects, interaction between them and predict missing information, Therefore,
 analyzing social network data in real-world networks and detecting communities have
 become a very important problem in various areas.
+
 The problem of community detection revolves around finding such implicit communities
 in which the nodes that exhibit similar properties or behaviors are grouped together.
 Currently, there are several methods and techniques that deal with finding community
@@ -20,6 +21,7 @@ structure in given network. Another approach is to categorized nodes into groups
 order to maximize/minimize some cost function. Some of the algorithms based on these
 approaches are Girvan-Newman algorithm based on edge betweenness, Louvain algorithm, 
 Label propagation algorithm, Fast-greedy approach etc. 
+
 After studying and analyzing the existing community detection algorithms, in this project
 I am proposing a new algorithm which is a combination of Divisive Hierarchical Clustering
 and Agglomerative Hierarchical Clustering. This experiment is based on the concept
