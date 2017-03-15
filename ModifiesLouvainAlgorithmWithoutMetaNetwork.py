@@ -20,7 +20,7 @@ visual_style1["vertex_size"] = 18
 visual_style1["vertex_label_size"] = 10
 visual_style1["vertex_label_color"] = "#ffffff"
 visual_style1["bbox"] = (700, 600)
-#visual_style["layout"] = igraph.Graph.layout_random(dim=2)
+
 
 #
 #        Read a graph
