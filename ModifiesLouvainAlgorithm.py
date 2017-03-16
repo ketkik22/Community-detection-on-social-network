@@ -6,14 +6,26 @@ import igraph
         Functions
 """        
 
-def getClusterMembership (clusterList):
+def getClusterMembership (clusterList, noOfVertices):
     "This function converts cluster list into membership array"
     membership = []
+    for i in range(noOfVertices):
+        membership.insert(i, 0)
+    print clusterList
     print clusterList.membership
-    for i, cluster in enumerate(clusterList):
-        for c in cluster:
-            d = c
-    print membership
+    for cluster in clusterList:
+        #print "*****",cluster
+        if(len(cluster) == 1):
+            vertex = cluster[0]
+            #print "single vertex == %d" %vertex
+            membership[vertex] = vertex
+        else:
+            minVertex = min(cluster)
+            #print "minVertex ==== %d" %minVertex
+            for c in cluster:
+                #print c
+                membership[c] = minVertex
+    #print "-------",membership
     return membership
 
 """
@@ -42,6 +54,8 @@ g = igraph.Graph.Erdos_Renyi(n=25, p=0.08, directed=False, loops=False)
 #g = igraph.Graph.Read_GraphML('karate.GraphML')
 
 g.vs["label"] = range(1000)
+noOfVertices = g.vcount()
+
 plot(g, "originalGraph.png", **visual_style)
 print summary(g)
 
@@ -53,12 +67,12 @@ g1.delete_edges(g1.es())
         Existing community detection algorithms: Louvain & Girvan-Newman
 """
 louvainCommunity = g.community_multilevel()
-plot(louvainCommunity, "louvain community.png", **visual_style)
+plot(louvainCommunity, "louvain community.png", mark_groups=True)
 #print louvainCommunity
 
 """
 girvanNewmanCommunity = g.community_edge_betweenness().as_clustering()
-plot(girvanNewmanCommunity, "girvan-newman community.png", **visual_style)
+plot(girvanNewmanCommunity, "girvan-newman community.png", mark_groups=True)
 """
 
 """
@@ -84,6 +98,7 @@ while ebList:
 #        Adding the edge to graph G' and finding the connected components   
 #      
     g.es[tupleId]['color'] ="green"
+    plot(g, "G%d.png" %idx1, **visual_style)
        
     s = g.vs.find(g.es[tupleId].source)
     t = g.vs.find(g.es[tupleId].target)
@@ -93,27 +108,24 @@ while ebList:
     #print src
     #print trgt
     
-    src['color'] = "black"
-    trgt['color'] = "black"
+    #src['color'] = "black"
+    #trgt['color'] = "black"
 
     g1.add_edges([(src, trgt)])
-    plot(g1, "G%d'.png" %idx1, **visual_style1) 
+    plot(g1, "G%d'.png" %idx1, mark_groups=True) 
     componentList = g1.clusters(mode=WEAK)
-    #print componentList
+    print type(componentList.membership),"+++++", componentList.q
 
-    membership = getClusterMembership(componentList)
-    
+    membershipList = getClusterMembership(componentList, noOfVertices)
+    vertexCluster = VertexClustering(g1, membership=membershipList)
+    print type(vertexCluster.membership),"+++++", vertexCluster.q
+    plot(vertexCluster, "cluster.png", mark_groups=True)
+    print componentList.compare_to(vertexCluster)
 #
 #       Deleting the edge and re-organizing the original graph
 #   
     g = g2.copy()
-    g.contract_vertices(componentList.membership, combine_attrs=min)
-    #g = componentList.cluster_graph(combine_vertices=min, combine_edges="sum")
-    plot(g, "G%d.png" %idx1, **visual_style)
-
-    #for v in g.vs():
-        #if(v['label'] > t['label']):
-            #v['label'] = v['label'] - 1
+    g.contract_vertices(vertexCluster.membership, combine_attrs=min)
             
 #
 #       Re-calculating the edge betweenness ratio
