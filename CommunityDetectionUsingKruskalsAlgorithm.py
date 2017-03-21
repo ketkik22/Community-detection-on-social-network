@@ -1,8 +1,6 @@
 import operator
 from igraph import *
-import igraph
-
-import Queue as queue
+import queue as queue
 
 from unionfind import unionfind
 from random import randint
@@ -31,25 +29,25 @@ visual_style1["bbox"] = (700, 600)
 #
 #        Read a graph
 #
-g = igraph.Graph.Read_GraphML('karate.GraphML')
+#g = Graph.Read_GraphML('karate.GraphML')
 x = 25
-#g = igraph.Graph.Erdos_Renyi(n=x, p=0.2, directed=False, loops=False)
+g = Graph.Erdos_Renyi(n=x, p=0.2, directed=False, loops=False)
 g.vs["label"] = range(1000)
-"""
+
 for edge in g.es():
-    w = randint(1, 15)
-    edge["weight"] = w
-    edge["label"] = w
-"""    
+    weight = g.vs.find(edge.source).degree() + g.vs.find(edge.target).degree()
+    edge["weight"] = weight
+    edge['label'] = weight
+
 plot(g, "originalGraph.png", **visual_style)
 #print summary(g)
 
 louvainCommunity = g.community_multilevel()
-plot(louvainCommunity, "louvain community.png", **visual_style)
-print louvainCommunity
+plot(louvainCommunity, "louvain community.png", mark_groups=True)
+print (louvainCommunity)
 
 girvanNewmanCommunity = g.community_edge_betweenness().as_clustering()
-plot(girvanNewmanCommunity, "girvan-newman community.png", **visual_style)
+plot(girvanNewmanCommunity, "girvan-newman community.png", mark_groups=True)
 
 mst = g.copy()
 mst.delete_edges(mst.es())
@@ -63,12 +61,13 @@ unionDS = unionfind(g.vcount())
 
 for edge in g.es():
     #print type(edge)
-    #weight = edge["weight"]
+    weight = edge["weight"]
     priotrityQ.put(edge)
+    print (edge.tuple, "-------", edge['weight'])
     
 while not priotrityQ.empty():
     edge = priotrityQ.get()
-    #print edge
+    print (edge.tuple)
     if(unionDS.find(edge.source) != unionDS.find(edge.target)):
         unionDS.unite(edge.source, edge.target)
         mst.add_edges([(edge.source, edge.target)])
@@ -89,8 +88,10 @@ Approximation of value of k
 count = 0
 while count < 16:
     k = randint(1,mst.ecount()-1)
-    print "************************************************", k
+    print ("************************************************", k)
     mst = mst1.copy()
+    ebList = mst.edge_betweenness()
+    ebList = sorted(ebList, key=float, reverse=True)
     """
     Removing k-1 edges
     """
@@ -105,10 +106,10 @@ while count < 16:
         if(tupleId < mst.ecount()):
             mst.delete_edges([(mst.es[tupleId].tuple[0], mst.es[tupleId].tuple[1])])
         i+= 1
-    plot(mst, "community with k=%d.png"%k, **visual_style)
-    comm = mst.clusters(mode=STRONG)
-    print comm
-    print mst.modularity(comm, weights=None)
+    plot(mst, "community with k=%d.png"%k, mark_groups=True)
+    comm = mst.clusters(mode="STRONG")
+    print (comm)
+    print (mst.modularity(comm, weights=None))
     count += 1
 
 
