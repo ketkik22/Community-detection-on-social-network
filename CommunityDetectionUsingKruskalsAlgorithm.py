@@ -5,8 +5,6 @@ import queue as queue
 from unionfind import unionfind
 from random import randint
 
-
-
 #
 #       Visual style
 #
@@ -49,6 +47,9 @@ print (louvainCommunity)
 girvanNewmanCommunity = g.community_edge_betweenness().as_clustering()
 plot(girvanNewmanCommunity, "girvan-newman community.png", mark_groups=True)
 
+mstTree = Graph.spanning_tree(g, weights=g.es['weight'], return_tree=True)
+plot(mstTree, "spanningTreeByPrim.png", **visual_style)
+
 mst = g.copy()
 mst.delete_edges(mst.es())
 
@@ -56,23 +57,31 @@ mst.delete_edges(mst.es())
 Running kruskal's algorithm
 """
 
-priotrityQ = queue.PriorityQueue()
+priotrityQWeights = queue.PriorityQueue()
 unionDS = unionfind(g.vcount())
+alreadyUsedEdges = []
 
 for edge in g.es():
-    #print type(edge)
+    #print(type(edge))
     weight = edge["weight"]
-    priotrityQ.put(edge)
-    print (edge.tuple, "-------", edge['weight'])
+    priotrityQWeights.put(weight)
+    #print(edge.tuple, "-------", edge['weight'])
     
-while not priotrityQ.empty():
-    edge = priotrityQ.get()
-    print (edge.tuple)
+while not priotrityQWeights.empty():
+    weight = priotrityQWeights.get()
+    #print(priotrityQWeights.qsize())
+
+    for e in g.es():
+        if (e['weight'] == weight and e not in alreadyUsedEdges):
+            edge = e
+            alreadyUsedEdges.append(edge)
+            break
+    #print(edge.tuple, "-------", edge['weight'])
+
     if(unionDS.find(edge.source) != unionDS.find(edge.target)):
         unionDS.unite(edge.source, edge.target)
         mst.add_edges([(edge.source, edge.target)])
-     
-#print summary(mst)   
+
 plot(mst, "MST.png", **visual_style)
 
 """
@@ -90,8 +99,7 @@ while count < 16:
     k = randint(1,mst.ecount()-1)
     print ("************************************************", k)
     mst = mst1.copy()
-    ebList = mst.edge_betweenness()
-    ebList = sorted(ebList, key=float, reverse=True)
+
     """
     Removing k-1 edges
     """
