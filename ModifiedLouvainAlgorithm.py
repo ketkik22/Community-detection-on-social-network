@@ -7,18 +7,18 @@ import queue as queue
 def getEdgeWithSmallestEdgeBetweennessRatio(g, listOfEdgesAlreadyConsidered):
     "This function calculates edge betweenness ratio of all edges present in graph g"
     edgeBetweennessList = g.edge_betweenness()
+    minEdgeBetweenness = edgeBetweennessList[0]
+    edge = g.es[0]
 
-    while edgeBetweennessList:
-        minEdgeBetweenness = min(edgeBetweennessList)
-        edgeList = [g.es[index] for index, eb in enumerate(edgeBetweennessList) if minEdgeBetweenness == eb]
-        for edge in edgeList:
-            if(edge.index not in listOfEdgesAlreadyConsidered):
-                source = edge.source
-                target = edge.target
-                if(source != target):
-                    return edge
-                else:
-                    edgeBetweennessList.remove(minEdgeBetweenness)
+    for index, edgeBetweenness in enumerate(edgeBetweennessList):
+        e = g.es[index]
+        if(edgeBetweenness < minEdgeBetweenness and
+           e.index not in listOfEdgesAlreadyConsidered and
+           e.source != e.target):
+            minEdgeBetweenness = edgeBetweenness
+            edge = e
+    return edge
+
 
 def getConnectedComponentUsingBFS(g, vertex):
     "This function finds a connected component starting this vertex using Breadth-First search algorithm and returns it"
@@ -28,12 +28,16 @@ def getConnectedComponentUsingBFS(g, vertex):
     q.put(vertex)
     VisitedVertices.append(vertex)
 
-    while not queue.Empty():
+    while not q.empty():
         v = q.get()
+        #print(type(v),"---", v, "---", g.neighbors(v))
+
         for v1 in g.neighbors(v):
-            if v1 not in VisitedVertices:
-                VisitedVertices.append(v1)
-                q.put(v1)
+            vrtx = g.vs[v1]
+            #print(":::::::::::::::",type(vrtx))
+            if vrtx not in VisitedVertices:
+                VisitedVertices.append(vrtx)
+                q.put(vrtx)
 
     return VisitedVertices
 
@@ -44,22 +48,26 @@ def getAllConnectedComponents(g, vCount):
     VerticesTraversed = []
     VerticesNotTraversed = []
 
-    for vertex in g.vs():
-        VerticesNotTraversed.append(vertex)
+    for index in range (0, g.vcount()):
+        VerticesNotTraversed.append(g.vs[index])
 
     while len(VerticesTraversed) < g.vcount():
-        v = VerticesNotTraversed.pop()
+        v = VerticesNotTraversed[0]
         s = getConnectedComponentUsingBFS(g, v)
-        VerticesNotTraversed.append(v)
 
         for vertex in s:
             VerticesNotTraversed.remove(vertex)
             VerticesTraversed.append(vertex)
         Components.append(s)
 
-    print(Components)
+    #print(Components)
     return Components
 
+def getVertexClusteringFromConnectedComponents(connectedComponents):
+    "This function takes connected compoenents and cretaes vertex clustering object"
+    for component in connectedComponents:
+        for c in component:
+            print(type(c))
 
 """
         Visual styles
@@ -98,6 +106,7 @@ isLocalMaximaAchievedCount = 3;
 maxModularity = -1;
 maxModularityCommunities = []
 listOfEdgesAlreadyConsidered = []
+idx = 1;
 
 while isLocalMaximaAchievedCount >= 0:
     edge = getEdgeWithSmallestEdgeBetweennessRatio(inputGraph, listOfEdgesAlreadyConsidered)
@@ -110,6 +119,7 @@ while isLocalMaximaAchievedCount >= 0:
     outputGraph.add_edges([(source, target)])
 
     connectedComponents = getAllConnectedComponents(outputGraph, noOfVertices)
+    vertexCluster = getVertexClusteringFromConnectedComponents(connectedComponents)
 
     componentList = outputGraph.clusters(mode="WEAK")
     inputGraph = copyGraph.copy()
@@ -119,9 +129,7 @@ while isLocalMaximaAchievedCount >= 0:
         maxModularity = componentList.q
         isLocalMaximaAchievedCount = 3;
     else:
-        isLocalMaximaAchievedCount -= 1
+        isLocalMaximaAchievedCount = 1
 
-    plot(outputGraph, "outputGraph%f.png" %maxModularity, **visual_style)
-
-
-
+    plot(outputGraph, "outputGraph%d.png" %idx, **visual_style)
+    idx += 1
