@@ -4,31 +4,40 @@ import queue as queue
 """
         Functions
 """
-def getEdgeWithSmallestEdgeBetweennessRatio(g, listOfEdgesAlreadyConsidered):
+def getEdgeWithSmallestEdgeBetweennessRatio(g, listOfEdgesAlreadyConsidered, alreadyConsideredEBValues):
     "This function calculates edge betweenness ratio of all edges present in graph g"
-    #print("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*")
-    s = "["
-    for edge in g.es():
-        s = s + "(%d,%d)," % (edge.source, edge.target)
-    s = s + "]"
-    #print(s)
-    edgeBetweennessList = g.edge_betweenness()
+    #print("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*", listOfEdgesAlreadyConsidered)
+    temp = g.edge_betweenness()
+    edgeBetweennessList=[]
+
+    for index, eb in enumerate(temp):
+        edgeBetweennessList.insert(index,round(eb,3))
+
+    temp = None
     #print(edgeBetweennessList)
 
     minEdgeBetweenness = max(edgeBetweennessList)
     for eb in edgeBetweennessList:
-        if eb < minEdgeBetweenness and eb != 0.0:
+        if eb < minEdgeBetweenness and eb != 0.00 and eb not in alreadyConsideredEBValues:
             minEdgeBetweenness = eb
 
+    #print("Min edge betweenness = %f"%minEdgeBetweenness)
     edgeList = []
 
     for index, edgeBetweenness in enumerate(edgeBetweennessList):
         e = g.es[index]
+        #print(e.tuple, " ---------------- ",e.index," ------- %f"%edgeBetweenness)
         if(edgeBetweenness == minEdgeBetweenness and
            e.index not in listOfEdgesAlreadyConsidered and
            e.source != e.target):
+            #print(e.tuple, " %%%%%%%%%%%%%%%%%%%%%%%%% ",e.index,"%%%%%%%%%%%% %f"%edgeBetweenness)
+            #print(e.tuple, " *********************** %f" % round(edgeBetweenness,3))
             edgeList.append(e)
-    return edgeList
+    if(len(edgeList) == 0 and len(alreadyConsideredEBValues) < 5):
+        alreadyConsideredEBValues.append(minEdgeBetweenness)
+        return getEdgeWithSmallestEdgeBetweennessRatio(g, listOfEdgesAlreadyConsidered, alreadyConsideredEBValues)
+    else:
+        return edgeList
 
 
 def getConnectedComponentUsingBFS(g, vertex):
@@ -96,6 +105,9 @@ def getActualVertices(graph, membership, edge, listOfEdgesAlreadyConsidered):
     "This method takes connected components from previous step and returns actual vertices that should be connected"
     tuple = []
 
+    source = edge.source
+    target = edge.target
+
     flag = False
     for index1, m1 in enumerate(membership):
        if m1 == edge.source:
@@ -129,9 +141,10 @@ visual_style["bbox"] = (700, 600)
 """
          Read a graph
 """
-inputGraph = Graph.Barabasi(n = 8, m = 2, zero_appeal=3)
+#inputGraph = Graph.Barabasi(n = 30 , m = 3, zero_appeal=3)
 #inputGraph = Graph.Erdos_Renyi(n=25, p=0.08, directed=False, loops=False)
-#g = igraph.Graph.Read_GraphML('karate.GraphML')
+#inputGraph = Graph.Read_GraphML('karate.GraphML')
+inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
 
 inputGraph.vs["label"] = range(1000)
 noOfVertices = inputGraph.vcount()
@@ -147,44 +160,53 @@ outputGraph.delete_edges(outputGraph.es())
 """
 louvainCommunity = inputGraph.community_multilevel()
 plot(louvainCommunity, "louvain community.png", mark_groups=True)
-#print louvainCommunity
+print("Modularity of Louvain algorithm = %f"%louvainCommunity.q)
 
 girvanNewmanCommunity = inputGraph.community_edge_betweenness().as_clustering()
 plot(girvanNewmanCommunity, "girvan-newman community.png", mark_groups=True)
+print("Modularity of Girvan-Newman algorithm = %f"%girvanNewmanCommunity.q)
 
-isLocalMaximaAchievedCount = 3;
-maxModularity = -1;
+isLocalMaximaAchievedCount = 20
+maxModularity = -1
 maxModularityCommunities = []
 listOfEdgesAlreadyConsidered = []
-idx = 1;
+idx = 1
+index = 1
 connectedComponents = getAllConnectedComponents(outputGraph, noOfVertices)
 vertexCluster = getVertexClusteringFromConnectedComponents(outputGraph, connectedComponents)
 
 while isLocalMaximaAchievedCount >= 0:
-    edgeList = getEdgeWithSmallestEdgeBetweennessRatio(inputGraph, listOfEdgesAlreadyConsidered)
-
+    temp = []
+    edgeList = getEdgeWithSmallestEdgeBetweennessRatio(inputGraph, listOfEdgesAlreadyConsidered, temp)
+    #print(len(edgeList))
     for edge in edgeList:
         #print(edge.tuple)
         tuples = getActualVertices(copyGraph, vertexCluster.membership, edge, listOfEdgesAlreadyConsidered)
         listOfEdgesAlreadyConsidered.append(edge.index)
         source = tuples[0]
         target = tuples[1]
+        #print(outputGraph.vs.find(source),"+++++++++++",outputGraph.vs.find(target))
         outputGraph.add_edges([(source, target)])
 
     connectedComponents = getAllConnectedComponents(outputGraph, noOfVertices)
     vertexCluster = getVertexClusteringFromConnectedComponents(outputGraph, connectedComponents)
-    #componentList = outputGraph.clusters(mode="STRONG")
+    componentList = outputGraph.clusters(mode="STRONG")
 
     inputGraph = copyGraph.copy()
     inputGraph.contract_vertices(vertexCluster.membership, combine_attrs=min(vertexCluster.membership))
 
-    modularity = vertexCluster.recalculate_modularity()
+    modularity = outputGraph.modularity(vertexCluster.membership)
     if(maxModularity < modularity):
         maxModularity = modularity
-        isLocalMaximaAchievedCount = 3;
+        index = idx
+        isLocalMaximaAchievedCount = 20;
     else:
-        isLocalMaximaAchievedCount = 1
+        isLocalMaximaAchievedCount -= 1
 
     print("%d   Modularity = %f" %(idx,modularity))
-    plot(outputGraph, "outputGraph%d.png" %idx, **visual_style)
+    #print("%d   Modularity with igraph  method = %f" % (idx, componentList.q))
+    plot(vertexCluster, "outputGraph%d.png" %idx, mark_groups=True)
     idx += 1
+
+print("Final index = %d"%index)
+print("%d final  Modularity = %f" %(idx,modularity))
