@@ -5,9 +5,37 @@ import queue as queue
 from unionfind import unionfind
 from random import randint
 
-#
-#       Visual style
-#
+"""
+        Functions
+"""
+def calculateNeighborhoodOverlap(graph, edge):
+    "This fucntion will calculate the neighborhood overlap of an edge and return it"
+    NP = 0
+
+    neighborsA = graph.neighbors(edge.source)
+    neighborsB = graph.neighbors(edge.target)
+
+    commonNeighbors = 0
+
+    if  len(neighborsA) < len(neighborsB):
+        for vertex in neighborsA:
+            if vertex in neighborsB:
+                commonNeighbors += 1
+    else:
+        for vertex in neighborsB:
+            if vertex in neighborsA:
+                commonNeighbors += 1
+
+    degreeA = graph.degree(edge.source,loops=False)
+    degreeB = graph.degree(edge.target,loops=False)
+
+    NP = commonNeighbors / (degreeA + degreeB - 2)
+
+    return NP
+
+"""
+        Visual Style
+"""
 visual_style = {}
 visual_style["edge_curved"] = False
 visual_style["vertex_color"] = "#ff3563"
@@ -16,41 +44,40 @@ visual_style["vertex_label_size"] = 10
 visual_style["vertex_label_color"] = "#ffffff"
 visual_style["bbox"] = (700, 600)
 
-visual_style1 = {}
-visual_style1["edge_curved"] = False
-visual_style1["vertex_size"] = 18
-visual_style1["vertex_label_size"] = 10
-visual_style1["vertex_label_color"] = "#ffffff"
-visual_style1["bbox"] = (700, 600)
-#visual_style["layout"] = igraph.Graph.layout_random(dim=2)
+"""
+        Input graph
+"""
+x = 40
+#inputGraph = Graph.Read_GraphML('karate.GraphML')
+inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
+#inputGraph = Graph.Barabasi(n=x, m=2, zero_appeal=3)
+inputGraph.vs["label"] = range(1000)
 
-#
-#        Read a graph
-#
-#g = Graph.Read_GraphML('karate.GraphML')
-x = 25
-g = Graph.Erdos_Renyi(n=x, p=0.2, directed=False, loops=False)
-g.vs["label"] = range(1000)
+for edge in inputGraph.es():
+    NP = calculateNeighborhoodOverlap(inputGraph, edge)
+    edge["weight"] = NP
+    #edge['label'] = NP
 
-for edge in g.es():
-    weight = g.vs.find(edge.source).degree() + g.vs.find(edge.target).degree()
-    edge["weight"] = weight
-    edge['label'] = weight
-
-plot(g, "originalGraph.png", **visual_style)
+plot(inputGraph, "originalGraph.png", **visual_style)
 #print summary(g)
 
-louvainCommunity = g.community_multilevel()
+louvainCommunity = inputGraph.community_multilevel()
 plot(louvainCommunity, "louvain community.png", mark_groups=True)
-print (louvainCommunity)
+print("Louvain algorithm")
+print(summary(louvainCommunity))
+print(louvainCommunity.q)
 
-girvanNewmanCommunity = g.community_edge_betweenness().as_clustering()
+girvanNewmanCommunity = inputGraph.community_edge_betweenness().as_clustering()
 plot(girvanNewmanCommunity, "girvan-newman community.png", mark_groups=True)
+print("Girvan-Newman algorithm ")
+print(summary(girvanNewmanCommunity))
+print(girvanNewmanCommunity.q)
+print("\n\n")
 
-mstTree = Graph.spanning_tree(g, weights=g.es['weight'], return_tree=True)
+mstTree = Graph.spanning_tree(inputGraph, weights=inputGraph.es['weight'], return_tree=True)
 plot(mstTree, "spanningTreeByPrim.png", **visual_style)
 
-mst = g.copy()
+mst = inputGraph.copy()
 mst.delete_edges(mst.es())
 
 """
@@ -58,10 +85,10 @@ Running kruskal's algorithm
 """
 
 priotrityQWeights = queue.PriorityQueue()
-unionDS = unionfind(g.vcount())
+unionDS = unionfind(inputGraph.vcount())
 alreadyUsedEdges = []
 
-for edge in g.es():
+for edge in inputGraph.es():
     #print(type(edge))
     weight = edge["weight"]
     priotrityQWeights.put(weight)
@@ -71,7 +98,7 @@ while not priotrityQWeights.empty():
     weight = priotrityQWeights.get()
     #print(priotrityQWeights.qsize())
 
-    for e in g.es():
+    for e in inputGraph.es():
         if (e['weight'] == weight and e not in alreadyUsedEdges):
             edge = e
             alreadyUsedEdges.append(edge)
@@ -88,17 +115,22 @@ plot(mst, "MST.png", **visual_style)
 calculating edge betweenness
 """
 ebList = mst.edge_betweenness()
-ebList = sorted(ebList, key=float, reverse=True)
-
+alreadyUsedValuesOfK = []
 mst1 = mst.copy()
 """
 Approximation of value of k
 """
 count = 0
-while count < 16:
-    k = randint(1,mst.ecount()-1)
+while count < 20:
+
+    while len(alreadyUsedValuesOfK) != mst.ecount():
+        k = randint(1, mst.ecount())
+        if k not in alreadyUsedValuesOfK:
+            alreadyUsedValuesOfK.append(k)
+            break
     print ("************************************************", k)
     mst = mst1.copy()
+    ebList = mst.edge_betweenness()
 
     """
     Removing k-1 edges
@@ -106,20 +138,25 @@ while count < 16:
     i = 0
     while i < k-1:
         tupleId=0
+        maxEdgeBetweenness = max(ebList)
         for idx, eb in enumerate(ebList):
-            if(ebList[i] == eb):
+            if(maxEdgeBetweenness == eb):
                 tupleId = idx;
-                break; 
+                break;
         #if(mst.are_connected(mst.es[tupleId].tuple[0], mst.es[tupleId].tuple[1])):
         if(tupleId < mst.ecount()):
             mst.delete_edges([(mst.es[tupleId].tuple[0], mst.es[tupleId].tuple[1])])
+            ebList.remove(maxEdgeBetweenness)
         i+= 1
-    plot(mst, "community with k=%d.png"%k, mark_groups=True)
+
     comm = mst.clusters(mode="STRONG")
-    print (comm)
-    print (mst.modularity(comm, weights=None))
+    plot(comm, "community with k=%d.png"%k, mark_groups=True)
+
+    #print(comm)
+    print(mst.modularity(comm))
     count += 1
 
+exit()
 
     
 
