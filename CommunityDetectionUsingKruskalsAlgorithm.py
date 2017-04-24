@@ -8,7 +8,7 @@ from random import randint
 """
         Functions
 """
-def calculateNeighborhoodOverlap(graph, edge):
+def calculateWeightOfEdgeUsingNeighborhoodOverlap(graph, edge):
     "This fucntion will calculate the neighborhood overlap of an edge and return it"
     NP = 0
 
@@ -29,9 +29,17 @@ def calculateNeighborhoodOverlap(graph, edge):
     degreeA = graph.degree(edge.source,loops=False)
     degreeB = graph.degree(edge.target,loops=False)
 
-    NP = commonNeighbors / (degreeA + degreeB - 2)
+    if((degreeA + degreeB - 2) == 0):
+        NP = 0
+    else:
+        NP = commonNeighbors / (degreeA + degreeB - 2)
 
     return NP
+
+def calculateWeightOfEdgeUsingDegree(graph, edge):
+    "This method calculates the weight of the edge using degree of its endpoints"
+    weight = len(graph.neighbors(edge.source)) + len(graph.neighbors(edge.target))
+    return weight
 
 """
         Visual Style
@@ -49,30 +57,38 @@ visual_style["bbox"] = (700, 600)
 """
 x = 40
 #inputGraph = Graph.Read_GraphML('karate.GraphML')
-inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
+#inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
+#inputGraph = read('football.gml')
+inputGraph = read('dolphins.gml')
 #inputGraph = Graph.Barabasi(n=x, m=2, zero_appeal=3)
-inputGraph.vs["label"] = range(1000)
+
+#inputGraph.vs["label"] = range(1000)
+for v in inputGraph.vs():
+    v['label'] = v.index
 
 for edge in inputGraph.es():
-    NP = calculateNeighborhoodOverlap(inputGraph, edge)
-    edge["weight"] = NP
+    #weight = calculateWeightOfEdgeUsingNeighborhoodOverlap(inputGraph, edge)
+    weight = calculateWeightOfEdgeUsingDegree(inputGraph, edge)
+    edge["weight"] = weight
     #edge['label'] = NP
 
 plot(inputGraph, "originalGraph.png", **visual_style)
 #print summary(g)
 
+"""
+        Existing community detection algorithms: Louvain & Girvan-Newman
+"""
 louvainCommunity = inputGraph.community_multilevel()
 plot(louvainCommunity, "louvain community.png", mark_groups=True)
-print("Louvain algorithm")
+print("\n************************* LOUVAIN ALGORITHM *************************")
 print(summary(louvainCommunity))
-print(louvainCommunity.q)
+print("Modularity of Louvain algorithm = %f\t\t"%louvainCommunity.q,"\n\n")
 
 girvanNewmanCommunity = inputGraph.community_edge_betweenness().as_clustering()
 plot(girvanNewmanCommunity, "girvan-newman community.png", mark_groups=True)
-print("Girvan-Newman algorithm ")
+print("************************* GIRVAN-NEWMAN ALGORITHM ********************")
 print(summary(girvanNewmanCommunity))
-print(girvanNewmanCommunity.q)
-print("\n\n")
+print("Modularity of Girvan-Newman algorithm = %f"%girvanNewmanCommunity.q,"\n\n\n")
 
 mstTree = Graph.spanning_tree(inputGraph, weights=inputGraph.es['weight'], return_tree=True)
 plot(mstTree, "spanningTreeByPrim.png", **visual_style)
@@ -121,6 +137,9 @@ mst1 = mst.copy()
 Approximation of value of k
 """
 count = 0
+index = 0
+maxModularity = -1
+
 while count < 20:
 
     while len(alreadyUsedValuesOfK) != mst.ecount():
@@ -128,7 +147,7 @@ while count < 20:
         if k not in alreadyUsedValuesOfK:
             alreadyUsedValuesOfK.append(k)
             break
-    print ("************************************************", k)
+    print ("************************************************  k = ", k)
     mst = mst1.copy()
     ebList = mst.edge_betweenness()
 
@@ -150,12 +169,24 @@ while count < 20:
         i+= 1
 
     comm = mst.clusters(mode="STRONG")
-    plot(comm, "community with k=%d.png"%k, mark_groups=True)
 
-    #print(comm)
-    print(mst.modularity(comm))
+    modularity = comm.q
+    if (maxModularity < modularity):
+        maxModularity = modularity
+        index = k
+        maxModularityCommunities = comm
+
+    print(summary(comm))
+    print("Modularity = %f\t\t" % (comm.q))
+    # print("%d   Modularity with igraph  method = %f\t\t" % (idx, componentList.q),summary(vertexCluster))
+    plot(comm, "outputGraph%d.png" %k, mark_groups=True)
     count += 1
 
+
+print("\n\nMax modularity index = %d"%index)
+print("Number of communities  =  ", len(set(maxModularityCommunities.membership)))
+print("Modularity = %f\t\t" % (maxModularity))
+plot(maxModularityCommunities, "outputGraph.png", mark_groups=True)
 exit()
 
     
