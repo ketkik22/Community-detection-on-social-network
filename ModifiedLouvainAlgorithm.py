@@ -14,7 +14,7 @@ def getEdgeWithSmallestEdgeBetweennessRatio(g, listOfEdgesAlreadyConsidered, alr
         edgeBetweennessList.insert(index,round(eb,3))
 
     temp = None
-    #print(edgeBetweennessList)
+    #print(sorted(edgeBetweennessList))
 
     minEdgeBetweenness = max(edgeBetweennessList)
     for eb in edgeBetweennessList:
@@ -33,7 +33,7 @@ def getEdgeWithSmallestEdgeBetweennessRatio(g, listOfEdgesAlreadyConsidered, alr
             #print(e.tuple, " %%%%%%%%%%%%%%%%%%%%%%%%% ",e.index,"%%%%%%%%%%%% %f"%edgeBetweenness)
             #print(e.tuple, " *********************** %f" % round(edgeBetweenness,3))
             edgeList.append(e)
-    if(len(edgeList) == 0 and len(alreadyConsideredEBValues) < 5):
+    if(len(edgeList) == 0 and len(alreadyConsideredEBValues) < 10):
         alreadyConsideredEBValues.append(minEdgeBetweenness)
         return getEdgeWithSmallestEdgeBetweennessRatio(g, listOfEdgesAlreadyConsidered, alreadyConsideredEBValues)
     else:
@@ -97,7 +97,7 @@ def getVertexClusteringFromConnectedComponents(graph, connectedComponents):
             value = min(temp)
             for vertex in component:
                 membership.insert(vertex.index, value)
-    #print(membership)
+    #print("############# membership ###",membership)
     vertexCluster = VertexClustering(graph, membership=membership)
     return vertexCluster
 
@@ -133,20 +133,24 @@ def getActualVertices(graph, membership, edge, listOfEdgesAlreadyConsidered):
 visual_style = {}
 visual_style["edge_curved"] = False
 visual_style["vertex_color"] = "#ff3563"
-visual_style["vertex_size"] = 18
-visual_style["vertex_label_size"] = 10
+visual_style["vertex_size"] = 30
+visual_style["vertex_label_size"] = 15
 visual_style["vertex_label_color"] = "#ffffff"
-visual_style["bbox"] = (700, 600)
+visual_style["bbox"] = (1500, 1600)
 
 """
          Read a graph
 """
-#inputGraph = Graph.Barabasi(n = 30 , m = 3, zero_appeal=3)
-#inputGraph = Graph.Erdos_Renyi(n=25, p=0.08, directed=False, loops=False)
 #inputGraph = Graph.Read_GraphML('karate.GraphML')
-inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
+#inputGraph = Graph.Barabasi(n = 100 , m = 4, zero_appeal=3)
+#inputGraph = Graph.Erdos_Renyi(n=25, p=0.08, directed=False, loops=False)
+inputGraph = read('dolphins.gml')
+#inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
+#print("%%%%%%%%%%%%%%%%",summary(inputGraph))
 
-inputGraph.vs["label"] = range(1000)
+for v in inputGraph.vs():
+    v['label'] = v.index
+
 noOfVertices = inputGraph.vcount()
 
 plot(inputGraph, "inputGraph.png", **visual_style)
@@ -160,15 +164,18 @@ outputGraph.delete_edges(outputGraph.es())
 """
 louvainCommunity = inputGraph.community_multilevel()
 plot(louvainCommunity, "louvain community.png", mark_groups=True)
-print("Modularity of Louvain algorithm = %f"%louvainCommunity.q)
+print("************************* LOUVAIN ALGORITHM *************************")
+print(summary(louvainCommunity))
+print("Modularity of Louvain algorithm = %f\t\t"%louvainCommunity.q,"\n\n")
 
 girvanNewmanCommunity = inputGraph.community_edge_betweenness().as_clustering()
 plot(girvanNewmanCommunity, "girvan-newman community.png", mark_groups=True)
-print("Modularity of Girvan-Newman algorithm = %f"%girvanNewmanCommunity.q)
+print("************************* GIRVAN-NEWMAN ALGORITHM ********************")
+print(summary(girvanNewmanCommunity))
+print("Modularity of Girvan-Newman algorithm = %f"%girvanNewmanCommunity.q,"\n\n\n")
 
-isLocalMaximaAchievedCount = 20
+isLocalMaximaAchievedCount = 30
 maxModularity = -1
-maxModularityCommunities = []
 listOfEdgesAlreadyConsidered = []
 idx = 1
 index = 1
@@ -176,10 +183,17 @@ connectedComponents = getAllConnectedComponents(outputGraph, noOfVertices)
 vertexCluster = getVertexClusteringFromConnectedComponents(outputGraph, connectedComponents)
 
 while isLocalMaximaAchievedCount >= 0:
+    print("**************************************************** Iteration %d"%idx)
     temp = []
+    """
+            Finding edges with minimum edge betweenness
+    """
     edgeList = getEdgeWithSmallestEdgeBetweennessRatio(inputGraph, listOfEdgesAlreadyConsidered, temp)
-    #print(len(edgeList))
+
     for edge in edgeList:
+        """
+                Adding all the edges with min edge betweenness to ouput graph
+        """
         #print(edge.tuple)
         tuples = getActualVertices(copyGraph, vertexCluster.membership, edge, listOfEdgesAlreadyConsidered)
         listOfEdgesAlreadyConsidered.append(edge.index)
@@ -188,25 +202,43 @@ while isLocalMaximaAchievedCount >= 0:
         #print(outputGraph.vs.find(source),"+++++++++++",outputGraph.vs.find(target))
         outputGraph.add_edges([(source, target)])
 
+    """
+            Finding connected components in output graph
+    """
     connectedComponents = getAllConnectedComponents(outputGraph, noOfVertices)
+
+    """
+            Finding communities using connected components
+    """
     vertexCluster = getVertexClusteringFromConnectedComponents(outputGraph, connectedComponents)
     componentList = outputGraph.clusters(mode="STRONG")
 
+    """
+            Building a meta network on input graph
+    """
     inputGraph = copyGraph.copy()
     inputGraph.contract_vertices(vertexCluster.membership, combine_attrs=min(vertexCluster.membership))
 
-    modularity = outputGraph.modularity(vertexCluster.membership)
+    """
+            Checking if local maxima of modularity is achieved
+    """
+    modularity = vertexCluster.q
     if(maxModularity < modularity):
         maxModularity = modularity
         index = idx
-        isLocalMaximaAchievedCount = 20;
+        maxModularityCommunities = vertexCluster
+        isLocalMaximaAchievedCount = 30;
     else:
         isLocalMaximaAchievedCount -= 1
 
-    print("%d   Modularity = %f" %(idx,modularity))
-    #print("%d   Modularity with igraph  method = %f" % (idx, componentList.q))
+    print("Number of communities  =  ",len(set(vertexCluster.membership)))
+    print("Modularity = %f\t\t" %(modularity))
+    #print("%d   Modularity with igraph  method = %f\t\t" % (idx, componentList.q),summary(vertexCluster))
     plot(vertexCluster, "outputGraph%d.png" %idx, mark_groups=True)
     idx += 1
 
-print("Final index = %d"%index)
-print("%d final  Modularity = %f" %(idx,modularity))
+print("\n\nMax modularity index = %d"%index)
+print("Number of communities  =  ", len(set(maxModularityCommunities.membership)))
+print("Modularity = %f\t\t" % (maxModularity))
+plot(maxModularityCommunities, "outputGraph.png", mark_groups=True)
+exit()
