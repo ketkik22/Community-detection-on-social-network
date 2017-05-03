@@ -144,9 +144,9 @@ visual_style["bbox"] = (1500, 1600)
 #inputGraph = Graph.Read_GraphML('karate.GraphML')
 #inputGraph = Graph.Barabasi(n = 100 , m = 4, zero_appeal=3)
 #inputGraph = Graph.Erdos_Renyi(n=25, p=0.08, directed=False, loops=False)
-inputGraph = read('dolphins.gml')
+inputGraph = Graph.Read_DL('out.ego-facebook', directed = False)
 #inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
-#print("%%%%%%%%%%%%%%%%",summary(inputGraph))
+print(summary(inputGraph))
 
 for v in inputGraph.vs():
     v['label'] = v.index
@@ -174,7 +174,7 @@ print("************************* GIRVAN-NEWMAN ALGORITHM ********************")
 print(summary(girvanNewmanCommunity))
 print("Modularity of Girvan-Newman algorithm = %f"%girvanNewmanCommunity.q,"\n\n\n")
 
-isLocalMaximaAchievedCount = 30
+isLocalMaximaAchievedCount = 40
 maxModularity = -1
 listOfEdgesAlreadyConsidered = []
 idx = 1
@@ -227,9 +227,9 @@ while isLocalMaximaAchievedCount >= 0:
         maxModularity = modularity
         index = idx
         maxModularityCommunities = vertexCluster
-        isLocalMaximaAchievedCount = 30;
+        isLocalMaximaAchievedCount = 40;
     else:
-        isLocalMaximaAchievedCount -= 1
+        isLocalMaximaAchievedCount = 1
 
     print("Number of communities  =  ",len(set(vertexCluster.membership)))
     print("Modularity = %f\t\t" %(modularity))
