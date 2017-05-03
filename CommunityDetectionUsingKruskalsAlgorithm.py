@@ -46,21 +46,22 @@ def calculateWeightOfEdgeUsingDegree(graph, edge):
 """
 visual_style = {}
 visual_style["edge_curved"] = False
-visual_style["vertex_color"] = "#ff3563"
-visual_style["vertex_size"] = 18
-visual_style["vertex_label_size"] = 10
+visual_style["vertex_color"] = "#13a53f"
+visual_style["vertex_size"] = 16
+visual_style["vertex_label_size"] = 12
 visual_style["vertex_label_color"] = "#ffffff"
-visual_style["bbox"] = (700, 600)
+visual_style["bbox"] = (300, 230)
 
 """
         Input graph
 """
-x = 40
+x = 18
 #inputGraph = Graph.Read_GraphML('karate.GraphML')
 #inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
 #inputGraph = read('football.gml')
-inputGraph = read('dolphins.gml')
-#inputGraph = Graph.Barabasi(n=x, m=2, zero_appeal=3)
+#inputGraph = read('dolphins.gml')
+inputGraph = Graph.Barabasi(n=x, m=3, zero_appeal=3)
+print(summary(inputGraph))
 
 #inputGraph.vs["label"] = range(1000)
 for v in inputGraph.vs():
@@ -72,7 +73,7 @@ for edge in inputGraph.es():
     edge["weight"] = weight
     #edge['label'] = NP
 
-plot(inputGraph, "originalGraph.png", **visual_style)
+plot(inputGraph, "graph01.png", **visual_style)
 #print summary(g)
 
 """
