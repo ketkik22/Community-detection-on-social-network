@@ -52,12 +52,12 @@ visual_style["bbox"] = (1500, 1600)
          Read a graph
 """
 # inputGraph = Graph.Barabasi(n = 100 , m = 4, zero_appeal=3)
-inputGraph = read('dolphins.gml')
+inputGraph = read('lesmis.gml')
 #inputGraph = Graph.Read_GraphML('karate.GraphML')
 # inputGraph = Graph.Read_Edgelist('0.edges',directed=False)
 #print("%%%%%%%%%%%%%%%%",summary(inputGraph))
 
-inputGraph.vs()['label'] = range(50)
+#inputGraph.vs()['label'] = range(50)
 #for v in inputGraph.vs():
     #v['label'] = v.id
 
